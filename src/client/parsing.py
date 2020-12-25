@@ -1,6 +1,12 @@
 import re
 import operator
 
+
+def parse_board_size(message):
+    message = message.replace('(', '').replace(')', '').replace(',', '').split(' ')
+    return int(message[1]), int(message[2])
+
+
 def parse_agents(message):
     agents = {}
     fig_info = re.findall(r'\([a-zA-Z]*\d* [a-zA-Z0-9.-]* \d*\)', message)

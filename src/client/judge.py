@@ -1,4 +1,4 @@
-from client.parsing import parse_agents
+from client.parsing import *
 from client.udpclient import UDPClient
 import random
 import operator
@@ -10,14 +10,16 @@ class Judge(UDPClient):
 
         self.server_addr = server_addr
         self.agents_addr = None
+
         self.positions = {}
+        self.board_size = (8, 8)
 
     def find_new_position(self, agent):
-        x = random.randint(0, 7)
-        y = random.randint(0, 7)
+        x = random.randint(0, self.board_size[0] - 1)
+        y = random.randint(0, self.board_size[1] - 1)
         while (x, y) in self.positions.values():
-            x = random.randint(0, 7)
-            y = random.randint(0, 7)
+            x = random.randint(0, self.board_size[0] - 1)
+            y = random.randint(0, self.board_size[1] - 1)
 
         self.positions[agent] = (x, y)
         return x, y
@@ -32,6 +34,11 @@ class Judge(UDPClient):
         print('received:', data)
         # TODO: check ok
 
+        # receive board size
+        data, addr = self.recvfrom()
+        self.board_size = parse_board_size(data)
+        print('received:', data)
+
         # receive agents
         data, addr = self.recvfrom()
         self.agents_addr = parse_agents(data)
@@ -39,7 +46,7 @@ class Judge(UDPClient):
 
         # send judge
         for agent in self.agents_addr:
-            self.sendto('judge', self.agents_addr[agent])
+            self.sendto(f'judge {str(self.board_size)}', self.agents_addr[agent])
         print('send judge')
 
         # send init positions
@@ -50,7 +57,10 @@ class Judge(UDPClient):
         self.sendto(mes, self.server_addr)
         print('send:', mes)
 
+        iteration = 0
         while True:
+            iteration += 1
+
             # receive collisions
             collisions = {}
             for i in range(len(self.agents_addr)):
@@ -72,6 +82,8 @@ class Judge(UDPClient):
             x, y = self.find_new_position(agent)
             self.sendto(f'change_pos ({agent} {x} {y})', self.server_addr)
             print('send:', f'change_pos ({agent} {x} {y})')
+
+        print(iteration)
 
 
 if __name__ == '__main__':
