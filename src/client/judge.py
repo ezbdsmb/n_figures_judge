@@ -13,11 +13,11 @@ class Judge(UDPClient):
         self.positions = {}
 
     def find_new_position(self, agent):
-        x = random.randint(0, 8)
-        y = random.randint(0, 8)
+        x = random.randint(0, 7)
+        y = random.randint(0, 7)
         while (x, y) in self.positions.values():
-            x = random.randint(0, 8)
-            y = random.randint(0, 8)
+            x = random.randint(0, 7)
+            y = random.randint(0, 7)
 
         self.positions[agent] = (x, y)
         return x, y
@@ -26,7 +26,6 @@ class Judge(UDPClient):
         # send init
         self.sendto('init_judge', self.server_addr)
         print('send init_judge')
-
 
         # receive init ok
         data, addr = self.recvfrom()
@@ -37,6 +36,11 @@ class Judge(UDPClient):
         data, addr = self.recvfrom()
         self.agents_addr = parse_agents(data)
         print('received:', data)
+
+        # send judge
+        for agent in self.agents_addr:
+            self.sendto('judge', self.agents_addr[agent])
+        print('send judge')
 
         # send init positions
         mes = 'change_pos '
@@ -54,14 +58,17 @@ class Judge(UDPClient):
                 print('received:', data)
 
                 coll_key = list(self.agents_addr.keys())[list(self.agents_addr.values()).index(addr)]
-                coll_val = len(data.split(' '))
+                coll_val = len(data.split(' ')) - 1
 
                 collisions[coll_key] = coll_val
+
+            if sum(collisions.values()) == 0:
+                break
 
             # send agent to move
             max_idx = [k for k, v in collisions.items() if v == max(collisions.values())]
 
-            agent = max_idx[random.randint(0, len(max_idx))]
+            agent = max_idx[random.randint(0, len(max_idx) - 1)]
             x, y = self.find_new_position(agent)
             self.sendto(f'change_pos ({agent} {x} {y})', self.server_addr)
             print('send:', f'change_pos ({agent} {x} {y})')
